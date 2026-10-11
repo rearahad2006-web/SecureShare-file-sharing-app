@@ -1,0 +1,1 @@
+- [Vite dependency cache](vite-dependency-cache.md) — after package version changes, stale optimized dependencies may survive a workflow restart.

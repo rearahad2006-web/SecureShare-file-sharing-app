@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "SecureShare"
+description = "A private file-sharing web app for administrators to upload files, create expiring access links, review link activity, and allow recipients to optionally submit media with explicit consent."
+version = "1.0.0"
+id = "artifacts/secureshare"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19415
+
+[services.development]
+run = "pnpm --filter @workspace/secureshare run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/secureshare", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/secureshare/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19415"
+BASE_PATH = "/"

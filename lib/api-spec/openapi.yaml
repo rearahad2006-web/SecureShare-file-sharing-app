@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: SecureShare private file-sharing API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: admin
+    description: Administrator bootstrap and dashboard data
+  - name: files
+    description: Private file management
+  - name: links
+    description: Share-link management and recipient access
+  - name: submissions
+    description: Voluntary recipient media submissions
+  - name: storage
+    description: Private object-storage upload URLs
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +33,633 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /admin/bootstrap-state:
+    get:
+      operationId: getAdminBootstrapState
+      tags: [admin]
+      summary: Check whether the signed-in user is an administrator or initial setup is available
+      responses:
+        "200":
+          description: Bootstrap state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BootstrapState"
+  /admin/bootstrap:
+    post:
+      operationId: claimInitialAdmin
+      tags: [admin]
+      summary: Claim the single initial administrator account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminProfileInput"
+      responses:
+        "201":
+          description: Initial admin account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BootstrapState"
+        "409":
+          description: An administrator already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [admin]
+      summary: Read dashboard totals and recent activity
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /files:
+    get:
+      operationId: listFiles
+      tags: [files]
+      summary: List private files
+      responses:
+        "200":
+          description: File records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FileRecord"
+    post:
+      operationId: createFile
+      tags: [files]
+      summary: Save metadata for an uploaded private file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileInput"
+      responses:
+        "201":
+          description: Saved file record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileRecord"
+  /files/{fileId}:
+    delete:
+      operationId: deleteFile
+      tags: [files]
+      summary: Delete a private file and its share assignments
+      parameters:
+        - $ref: "#/components/parameters/FileId"
+      responses:
+        "204":
+          description: File deleted
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a short-lived direct upload URL for a private file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+  /links:
+    get:
+      operationId: listLinks
+      tags: [links]
+      summary: List sharing links
+      responses:
+        "200":
+          description: Share links
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareLink"
+    post:
+      operationId: createLink
+      tags: [links]
+      summary: Create a bearer link for selected files
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareLinkInput"
+      responses:
+        "201":
+          description: Created sharing link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareLink"
+  /links/{linkId}:
+    patch:
+      operationId: updateLink
+      tags: [links]
+      summary: Update sharing link status, expiry, title, or submission setting
+      parameters:
+        - $ref: "#/components/parameters/LinkId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareLinkUpdate"
+      responses:
+        "200":
+          description: Updated sharing link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareLink"
+    delete:
+      operationId: deleteLink
+      tags: [links]
+      summary: Permanently delete a sharing link
+      parameters:
+        - $ref: "#/components/parameters/LinkId"
+      responses:
+        "204":
+          description: Sharing link deleted
+  /activity:
+    get:
+      operationId: listActivity
+      tags: [admin]
+      summary: List recent share-link access events
+      responses:
+        "200":
+          description: Recent activity events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityRecord"
+  /shares/{token}:
+    get:
+      operationId: getPublicShare
+      tags: [links]
+      summary: Resolve a public share token without exposing storage paths
+      parameters:
+        - $ref: "#/components/parameters/ShareToken"
+      responses:
+        "200":
+          description: Share link and assigned file metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicShare"
+        "404":
+          description: Link is invalid, disabled, or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /shares/{token}/files/{fileId}/content:
+    get:
+      operationId: getSharedFileContent
+      tags: [links]
+      summary: Stream one assigned file after a valid share access
+      parameters:
+        - $ref: "#/components/parameters/ShareToken"
+        - $ref: "#/components/parameters/FileId"
+      responses:
+        "200":
+          description: Private file bytes
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Link or file not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /shares/{token}/files/{fileId}/download:
+    get:
+      operationId: downloadSharedFile
+      tags: [links]
+      summary: Download one assigned file after a valid share access
+      parameters:
+        - $ref: "#/components/parameters/ShareToken"
+        - $ref: "#/components/parameters/FileId"
+      responses:
+        "200":
+          description: Private file bytes as an attachment
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Link or file not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /shares/{token}/submissions/upload-url:
+    post:
+      operationId: requestSubmissionUploadUrl
+      tags: [submissions]
+      summary: Request a direct upload URL for an explicitly chosen recipient submission
+      parameters:
+        - $ref: "#/components/parameters/ShareToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "403":
+          description: Submissions are not enabled for this link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /shares/{token}/submissions:
+    post:
+      operationId: createSubmission
+      tags: [submissions]
+      summary: Save a recipient's explicitly confirmed media submission
+      parameters:
+        - $ref: "#/components/parameters/ShareToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmissionInput"
+      responses:
+        "201":
+          description: Submission accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionRecord"
+  /submissions:
+    get:
+      operationId: listSubmissions
+      tags: [submissions]
+      summary: List voluntary recipient submissions
+      responses:
+        "200":
+          description: Recipient submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubmissionRecord"
+  /submissions/{submissionId}/content:
+    get:
+      operationId: getSubmissionContent
+      tags: [submissions]
+      summary: Stream a private recipient submission to the administrator
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Private submission bytes
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /submissions/{submissionId}:
+    delete:
+      operationId: deleteSubmission
+      tags: [submissions]
+      summary: Delete a recipient submission and its private object
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Submission deleted
+        "404":
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 components:
+  parameters:
+    FileId:
+      name: fileId
+      in: path
+      required: true
+      schema:
+        type: string
+    LinkId:
+      name: linkId
+      in: path
+      required: true
+      schema:
+        type: string
+    ShareToken:
+      name: token
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 32
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    BootstrapState:
+      type: object
+      properties:
+        isAdmin:
+          type: boolean
+        bootstrapAvailable:
+          type: boolean
+        email:
+          type: ["string", "null"]
+        displayName:
+          type: ["string", "null"]
+      required: [isAdmin, bootstrapAvailable, email, displayName]
+    AdminProfileInput:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required: [displayName]
+    DashboardSummary:
+      type: object
+      properties:
+        fileCount:
+          type: integer
+        activeLinkCount:
+          type: integer
+        accessCount:
+          type: integer
+        submissionCount:
+          type: integer
+        storageBytes:
+          type: integer
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityRecord"
+      required: [fileCount, activeLinkCount, accessCount, submissionCount, storageBytes, recentActivity]
+    FileRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        shareCount:
+          type: integer
+      required: [id, name, contentType, size, createdAt, shareCount]
+    FileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 160
+        size:
+          type: integer
+          minimum: 1
+          maximum: 524288000
+        objectPath:
+          type: string
+          minLength: 1
+          maxLength: 1024
+      required: [name, contentType, size, objectPath]
+    UploadUrlRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        size:
+          type: integer
+          minimum: 1
+          maximum: 524288000
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 160
+      required: [name, size, contentType]
+    UploadUrlResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+      required: [uploadURL, objectPath, metadata]
+    ShareLink:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        token:
+          type: string
+        active:
+          type: boolean
+        allowSubmissions:
+          type: boolean
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        accessCount:
+          type: integer
+        lastAccessAt:
+          type: ["string", "null"]
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedFile"
+      required: [id, title, token, active, allowSubmissions, expiresAt, createdAt, accessCount, lastAccessAt, files]
+    ShareLinkInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        fileIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+        allowSubmissions:
+          type: boolean
+      required: [title, fileIds, allowSubmissions]
+    ShareLinkUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        active:
+          type: boolean
+        allowSubmissions:
+          type: boolean
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+    SharedFile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+      required: [id, name, contentType, size]
+    PublicShare:
+      type: object
+      properties:
+        title:
+          type: string
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+        allowSubmissions:
+          type: boolean
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedFile"
+      required: [title, expiresAt, allowSubmissions, files]
+    ActivityRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        linkTitle:
+          type: string
+        fileName:
+          type: string
+        accessedAt:
+          type: string
+          format: date-time
+      required: [id, linkTitle, fileName, accessedAt]
+    SubmissionRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        linkTitle:
+          type: string
+        name:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, linkTitle, name, contentType, size, createdAt]
+    SubmissionInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 160
+        size:
+          type: integer
+          minimum: 1
+          maximum: 52428800
+        objectPath:
+          type: string
+          minLength: 1
+          maxLength: 1024
+      required: [name, contentType, size, objectPath]
 

@@ -1,0 +1,95 @@
+# Build SecureShare — Lightweight File Sharing Web App
+
+Build a complete, functional web application from scratch in Replit.
+
+## Main concept
+
+Create a private file-sharing website where I can upload files, generate a unique link, and share that link with a friend in another country.
+
+### 1. Admin Dashboard
+
+- Secure administrator login.
+- Upload images, PDFs, videos, and documents.
+- Manage uploaded files.
+- Generate unique sharing links for selected files.
+- Enable, disable, or expire links.
+- View link activity and access timestamps.
+- View and manage media voluntarily submitted by recipients.
+- Delete files and submissions.
+
+### 2. Recipient Website
+
+- Open shared files through a unique link without creating an account.
+- Display only files assigned to that link.
+- Show a clean, mobile-friendly interface.
+- Support file previews and downloads.
+- Load quickly on slow internet.
+- Display friendly messages for invalid or expired links.
+
+### 3. Optional Camera Feature
+
+- Allow recipients to open their front camera after explicitly choosing the feature and granting browser permission.
+- Support taking photos and recording videos.
+- Show visible camera activity and recording controls.
+- Allow the recipient to review and submit media.
+- Upload submissions to private storage only after explicit confirmation.
+- Display authorized submissions in the admin dashboard.
+- &#x20;activate the camera secretly or record in the background. show these files in admin panel
+
+### 4. Technology
+
+- React, TypeScript, and Vite for the frontend.
+- A lightweight Node.js backend.
+- A persistent database.
+- Private, persistent file storage.
+- Secure administrator authentication.
+- HTTPS-compatible camera access.
+
+Inspect the current Replit environment and choose compatible dependencies. Keep React and React DOM on matching versions.
+
+### 5. Performance
+
+- Optimize for slow mobile internet.
+- Keep the initial page lightweight.
+- Lazy-load the camera and admin dashboard.
+- Compress images when appropriate.
+- Display upload progress.
+- Handle interrupted uploads and network failures.
+- Avoid unnecessary animations and large dependencies.
+
+### 6. Security
+
+- Protect the admin dashboard and public APIs.
+- Generate unguessable sharing tokens.
+- Enforce file permissions on the server.
+- Validate file types and sizes.
+- Store secrets in environment variables.
+- Prevent unauthorized access to files and media.
+- Never expose private storage credentials.
+- its is bs cyber security  project&#x20;
+- only for educational porpuse
+
+### 3. Camera Permission Gate — Transparent and Required
+
+- Before accessing shared files, display a clear explanation that the website requires camera permission as part of this project's educational demonstration.
+- Require the recipient to explicitly choose **“Enable Camera and Continue”** and grant browser camera permission before unlocking the shared files.
+- If permission is denied, keep the files locked and show a friendly message explaining how the recipient can retry or leave the page.
+- Request camera permission only through a visible user action.
+- After permission is granted, stop the camera stream immediately. Do not take photos, record videos, or upload camera media automatically.
+- Provide a separate, visible camera interface for voluntary photo or video capture.
+- Let recipients preview their media and explicitly confirm before uploading it to private storage.
+- Show visible recording indicators and controls whenever recording is active.
+- Never activate the camera secretly, record in the background, or bypass browser permission controls.
+- Keep file access and camera access as separate permissions in the backend and frontend. Camera permission is not proof of consent to record or upload media.
+
+### 7. Build and Test
+
+### Build the real application, not a mockup. Implement the database, backend, authentication, uploads, sharing links, and admin dashboard.
+
+Run the development server and production build. Fix actual errors, test authorization and sharing links, and verify persistent storage.
+
+Do not leave placeholder buttons or fake functionality. Preserve working code and avoid unnecessary dependencies.
+
+At completion, report which features work, which remain incomplete, any required environment variables, and how to deploy the application.
+
+its nessecery to give camera permission  otherwise files doe not  access
